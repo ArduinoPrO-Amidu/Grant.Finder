@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with Ghanaian region, profession, preferences and subscription status",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user UID" },
+        "fullName": { "type": "string", "description": "Full name of the user" },
+        "email": { "type": "string", "description": "User contact email" },
+        "region": { "type": "string", "description": "Region in Ghana" },
+        "district": { "type": "string", "description": "District in Ghana (optional)" },
+        "ageRange": { "type": "string", "description": "Age bracket" },
+        "occupation": { "type": "string", "description": "Current profession or occupation" },
+        "educationLevel": { "type": "string", "description": "Highest education level achieved" },
+        "userType": { "type": "string", "description": "User persona type (Student, Entrepreneur, Farmer, Business owner, NGO, Researcher, Artisan, Individual, Other)" },
+        "interests": { "type": "array", "description": "Selected interest categories" },
+        "isPremium": { "type": "boolean", "description": "Whether user has unlocked Premium tier features" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "fullName", "region", "userType", "createdAt"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "Funding opportunity, grant, scholarship or youth/agriculture initiative in Ghana",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Opportunity title" },
+        "organization": { "type": "string", "description": "Offering organization" },
+        "category": { "type": "string", "description": "Category (Business grants, Agriculture, Scholarships, etc.)" },
+        "shortDescription": { "type": "string", "description": "Summary of the opportunity" },
+        "fullDescription": { "type": "string", "description": "In-depth details and objectives" },
+        "fundingAmount": { "type": "string", "description": "Verified funding amount or range" },
+        "currency": { "type": "string", "description": "Currency code (GHS, USD, EUR, etc.)" },
+        "applicationDeadline": { "type": "string", "description": "Closing date string" },
+        "opportunityStatus": { "type": "string", "description": "open, upcoming, closing_soon, closed, unverified" },
+        "verificationStatus": { "type": "string", "description": "verified, demo, community_sourced" },
+        "eligibilityCriteria": { "type": "array", "description": "List of eligibility criteria" },
+        "eligibleApplicantTypes": { "type": "array", "description": "List of applicant types" },
+        "requiredDocuments": { "type": "array", "description": "List of required documents" },
+        "openingDate": { "type": "string", "description": "Opening date" },
+        "applicationProcedure": { "type": "string", "description": "Procedure to submit" },
+        "officialSource": { "type": "string", "description": "Source name" },
+        "officialUrl": { "type": "string", "description": "Verified application URL" },
+        "lastVerificationDate": { "type": "string", "description": "Last checked date" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["title", "organization", "category", "opportunityStatus", "verificationStatus", "officialUrl", "createdAt"]
+    },
+    "SavedOpportunity": {
+      "title": "SavedOpportunity",
+      "description": "User bookmarked opportunity item",
+      "type": "object",
+      "properties": {
+        "opportunityId": { "type": "string", "description": "Referenced opportunity ID" },
+        "userId": { "type": "string", "description": "User UID who bookmarked" },
+        "title": { "type": "string", "description": "Snapshot of title" },
+        "organization": { "type": "string", "description": "Snapshot of organization" },
+        "category": { "type": "string", "description": "Category" },
+        "fundingAmount": { "type": "string", "description": "Funding amount" },
+        "applicationDeadline": { "type": "string", "description": "Deadline" },
+        "opportunityStatus": { "type": "string", "description": "Status" },
+        "savedAt": { "type": "string", "format": "date-time", "description": "Timestamp via FieldValue.serverTimestamp()" }
+      },
+      "required": ["opportunityId", "userId", "title", "savedAt"]
+    },
+    "TrackedApplication": {
+      "title": "TrackedApplication",
+      "description": "Application tracked through stages from Interested to Approved/Rejected",
+      "type": "object",
+      "properties": {
+        "applicationId": { "type": "string", "description": "Unique application ID" },
+        "opportunityId": { "type": "string", "description": "Referenced opportunity ID" },
+        "userId": { "type": "string", "description": "User UID" },
+        "opportunityTitle": { "type": "string", "description": "Title of the opportunity" },
+        "organization": { "type": "string", "description": "Organization name" },
+        "status": { "type": "string", "description": "Interested, Preparing application, Submitted, Under review, Approved, Rejected" },
+        "notes": { "type": "string", "description": "Personal application notes" },
+        "appliedDate": { "type": "string", "description": "Date applied" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["applicationId", "opportunityId", "userId", "opportunityTitle", "status", "createdAt"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "User notifications for deadlines, matching opportunities, or updates",
+      "type": "object",
+      "properties": {
+        "notificationId": { "type": "string", "description": "Notification ID" },
+        "userId": { "type": "string", "description": "User UID" },
+        "title": { "type": "string", "description": "Alert title" },
+        "message": { "type": "string", "description": "Alert message body" },
+        "type": { "type": "string", "description": "new_opportunity, matching_opportunity, deadline_reminder, status_change" },
+        "relatedOpportunityId": { "type": "string", "description": "Optional referenced opportunity" },
+        "isRead": { "type": "boolean", "description": "Read status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp" }
+      },
+      "required": ["notificationId", "userId", "title", "message", "type", "isRead", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private profile document for authenticated users"
+    },
+    "/opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "Published directory of verified and demo grant opportunities"
+    },
+    "/users/{userId}/saved_opportunities/{opportunityId}": {
+      "schema": "SavedOpportunity",
+      "description": "Opportunities bookmarked by the user"
+    },
+    "/users/{userId}/applications/{applicationId}": {
+      "schema": "TrackedApplication",
+      "description": "Grant applications actively tracked by the user"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "NotificationItem",
+      "description": "Personal notification log for the user"
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Collection of platform administrators who can publish and manage opportunities"
+    }
+  }
+}

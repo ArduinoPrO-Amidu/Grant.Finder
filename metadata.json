@@ -1,0 +1,6 @@
+{
+  "name": "Ghana GrantFinder",
+  "description": "Discover grants, scholarships, funding opportunities, and youth and agricultural initiatives across Ghana with AI-assisted eligibility matching.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

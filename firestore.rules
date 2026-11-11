@@ -1,0 +1,238 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // --- Validation Helper: User Profile ---
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+             data.region is string && data.region.size() <= 50 &&
+             data.userType is string && data.userType.size() <= 50 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             (!('district' in data) || (data.district is string && data.district.size() <= 100)) &&
+             (!('ageRange' in data) || (data.ageRange is string && data.ageRange.size() <= 30)) &&
+             (!('occupation' in data) || (data.occupation is string && data.occupation.size() <= 100)) &&
+             (!('educationLevel' in data) || (data.educationLevel is string && data.educationLevel.size() <= 100)) &&
+             (!('interests' in data) || (data.interests is list && data.interests.size() <= 30 && (data.interests.size() == 0 || data.interests[0] is string))) &&
+             (!('isPremium' in data) || data.isPremium is bool);
+    }
+
+    // --- Validation Helper: Opportunity ---
+    function isValidOpportunity(data) {
+      return data.title is string && data.title.size() >= 2 && data.title.size() <= 200 &&
+             data.organization is string && data.organization.size() <= 150 &&
+             data.category is string && data.category.size() <= 100 &&
+             data.opportunityStatus is string && data.opportunityStatus in ['open', 'upcoming', 'closing_soon', 'closed', 'unverified'] &&
+             data.verificationStatus is string && data.verificationStatus in ['verified', 'demo', 'community_sourced'] &&
+             data.officialUrl is string && data.officialUrl.size() <= 500 &&
+             (!('shortDescription' in data) || (data.shortDescription is string && data.shortDescription.size() <= 500)) &&
+             (!('fullDescription' in data) || (data.fullDescription is string && data.fullDescription.size() <= 10000)) &&
+             (!('fundingAmount' in data) || (data.fundingAmount is string && data.fundingAmount.size() <= 100)) &&
+             (!('currency' in data) || (data.currency is string && data.currency.size() <= 10)) &&
+             (!('applicationDeadline' in data) || (data.applicationDeadline is string && data.applicationDeadline.size() <= 50)) &&
+             (!('openingDate' in data) || (data.openingDate is string && data.openingDate.size() <= 50)) &&
+             (!('applicationProcedure' in data) || (data.applicationProcedure is string && data.applicationProcedure.size() <= 3000)) &&
+             (!('officialSource' in data) || (data.officialSource is string && data.officialSource.size() <= 150)) &&
+             (!('lastVerificationDate' in data) || (data.lastVerificationDate is string && data.lastVerificationDate.size() <= 50)) &&
+             (!('eligibilityCriteria' in data) || (data.eligibilityCriteria is list && data.eligibilityCriteria.size() <= 50 && (data.eligibilityCriteria.size() == 0 || data.eligibilityCriteria[0] is string))) &&
+             (!('eligibleApplicantTypes' in data) || (data.eligibleApplicantTypes is list && data.eligibleApplicantTypes.size() <= 30 && (data.eligibleApplicantTypes.size() == 0 || data.eligibleApplicantTypes[0] is string))) &&
+             (!('requiredDocuments' in data) || (data.requiredDocuments is list && data.requiredDocuments.size() <= 30 && (data.requiredDocuments.size() == 0 || data.requiredDocuments[0] is string)));
+    }
+
+    // --- Validation Helper: Saved Opportunity ---
+    function isValidSavedOpportunity(data) {
+      return data.opportunityId is string && data.opportunityId.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() <= 200 &&
+             (!('organization' in data) || (data.organization is string && data.organization.size() <= 150)) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 100)) &&
+             (!('fundingAmount' in data) || (data.fundingAmount is string && data.fundingAmount.size() <= 100)) &&
+             (!('applicationDeadline' in data) || (data.applicationDeadline is string && data.applicationDeadline.size() <= 50)) &&
+             (!('opportunityStatus' in data) || (data.opportunityStatus is string && data.opportunityStatus.size() <= 50));
+    }
+
+    // --- Validation Helper: Tracked Application ---
+    function isValidTrackedApplication(data) {
+      return data.applicationId is string && data.applicationId.size() <= 128 &&
+             data.opportunityId is string && data.opportunityId.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.opportunityTitle is string && data.opportunityTitle.size() <= 200 &&
+             (!('organization' in data) || (data.organization is string && data.organization.size() <= 150)) &&
+             data.status is string && data.status in ['Interested', 'Preparing application', 'Submitted', 'Under review', 'Approved', 'Rejected'] &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 3000)) &&
+             (!('appliedDate' in data) || (data.appliedDate is string && data.appliedDate.size() <= 50));
+    }
+
+    // --- Validation Helper: Notification ---
+    function isValidNotification(data) {
+      return data.notificationId is string && data.notificationId.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() <= 200 &&
+             data.message is string && data.message.size() <= 1000 &&
+             data.type is string && data.type in ['new_opportunity', 'matching_opportunity', 'deadline_reminder', 'status_change'] &&
+             (!('relatedOpportunityId' in data) || (data.relatedOpportunityId is string && data.relatedOpportunityId.size() <= 128)) &&
+             data.isRead is bool;
+    }
+
+    // ==========================================
+    // Collections
+    // ==========================================
+
+    // User Profiles
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       incoming().userId == userId &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'fullName', 'email', 'region', 'district', 'ageRange',
+                         'occupation', 'educationLevel', 'userType', 'interests',
+                         'isPremium', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+
+      // Subcollection: Saved Opportunities
+      match /saved_opportunities/{opportunityId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(userId) &&
+                         isValidId(opportunityId) &&
+                         incoming().savedAt is timestamp &&
+                         incoming().savedAt <= request.time &&
+                         isValidSavedOpportunity(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(userId) &&
+                         isValidId(opportunityId) &&
+                         incoming().opportunityId == existing().opportunityId &&
+                         incoming().userId == existing().userId &&
+                         incoming().savedAt == existing().savedAt &&
+                         isValidSavedOpportunity(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(opportunityId);
+      }
+
+      // Subcollection: Tracked Applications
+      match /applications/{applicationId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(userId) &&
+                         isValidId(applicationId) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidTrackedApplication(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(userId) &&
+                         isValidId(applicationId) &&
+                         incoming().applicationId == existing().applicationId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp &&
+                         incoming().updatedAt <= request.time &&
+                         isValidTrackedApplication(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'notes', 'appliedDate', 'updatedAt']);
+
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(applicationId);
+      }
+
+      // Subcollection: User Notifications
+      match /notifications/{notificationId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(userId) &&
+                         isValidId(notificationId) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidNotification(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         isValidId(userId) &&
+                         isValidId(notificationId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidNotification(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+
+        allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(notificationId);
+      }
+    }
+
+    // Published Opportunities Directory
+    match /opportunities/{opportunityId} {
+      allow get, list: if isSignedIn();
+
+      allow create: if isAdmin() &&
+                       isValidId(opportunityId) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidOpportunity(incoming());
+
+      allow update: if isAdmin() &&
+                       isValidId(opportunityId) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp &&
+                       incoming().updatedAt <= request.time &&
+                       isValidOpportunity(incoming());
+
+      allow delete: if isAdmin() && isValidId(opportunityId);
+    }
+
+    // Platform Administrators Roster
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if false;
+    }
+  }
+}
